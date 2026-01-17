@@ -13,5 +13,9 @@
       "js": ["libs/matter.min.js", "dist/content.js"]
     }
   ],
-  "permissions": ["activeTab"]
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ]
 }

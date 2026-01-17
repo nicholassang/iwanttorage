@@ -2,7 +2,19 @@ import html2canvas from "html2canvas";
 
 let isActive = false;
 
+chrome.storage.local.get("scriptActive", (data) => {
+  if (data.scriptActive === true) {
+    startScript(); 
+  } else {
+    isActive = false; 
+  }
+});
+
 function startScript() {
+  if (isActive) return;
+  isActive = true;
+  chrome.storage.local.set({ scriptActive: true });
+
             // Matter aliases
             const Engine = Matter.Engine,
                 Runner = Matter.Runner,
@@ -394,13 +406,18 @@ function startScript() {
             })();
 }
 
+function stopScript() {
+  if (!isActive) return;
+  isActive = false;
+  chrome.storage.local.set({ scriptActive: false });
+}
+
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.action === 'toggle') {
-    isActive = !isActive;
+  if (msg.action === "toggle") {
     if (isActive) {
-        startScript();
+      stopScript();
     } else {
-        window.location.reload();
+      startScript();
     }
   }
 });
