@@ -1,3 +1,5 @@
+import html2canvas from "html2canvas";
+
 window.addEventListener("load", () => {
 console.log("Physics Canvas Loaded");
 

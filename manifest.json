@@ -12,5 +12,6 @@
       "matches": ["https://*.google.com/*"],
       "js": ["libs/matter.min.js", "dist/content.js"]
     }
-  ]
+  ],
+  "permissions": ["activeTab"]
 }
