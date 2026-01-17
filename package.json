@@ -1,0 +1,26 @@
+{
+  "name": "iwanttorage",
+  "version": "1.0.0",
+  "description": "",
+  "main": "content.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nicholassang/iwanttorage.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/nicholassang/iwanttorage/issues"
+  },
+  "homepage": "https://github.com/nicholassang/iwanttorage#readme",
+  "dependencies": {
+    "esbuild": "^0.27.2",
+    "html2canvas": "^1.4.1",
+    "matter-js": "^0.20.0"
+  }
+}

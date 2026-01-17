@@ -10,7 +10,7 @@
   "content_scripts": [
     {
       "matches": ["https://*.google.com/*"],
-      "js": ["libs/matter.min.js", "content.js"]
+      "js": ["libs/matter.min.js", "dist/content.js"]
     }
   ]
 }

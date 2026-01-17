@@ -103,33 +103,36 @@ function spawnPhysicsFromDOM(el) {
         el._clickListener = null;
     }
 
-    // Hide the original DOM element
-    el.parentNode.removeChild(el);
-    el.style.pointerEvents = 'none';
-
     // Random colour
     const colors = ['#4285f4','#0f9d58','#f4b400','#db4437'];
     const color = colors[Math.floor(Math.random()*colors.length)];
 
-    // Create a physics body matching the DOM element
-    const body = Bodies.rectangle(
-        rect.left + rect.width/2,
-        rect.top + rect.height/2,
-        rect.width,
-        rect.height,
-        { restitution: 0.5 }
-    );
+    // Render DOM element to a canvas
+    html2canvas(el).then(canvasBitmap => {
+        // Hide the original DOM element
+        el.parentNode.removeChild(el);
+        el.style.pointerEvents = 'none';
+        
+        const body = Bodies.rectangle(
+            rect.left + rect.width/2,
+            rect.top + rect.height/2,
+            rect.width,
+            rect.height,
+            { restitution: 0.5 }
+        );
 
-    body.meta = {
-        width: rect.width,
-        height: rect.height,
-        color: color,         
-        originalWidth: rect.width,
-        originalHeight: rect.height
-    };
+        // Store the bitmap to draw in render loop
+        body.meta = {
+            width: rect.width,
+            height: rect.height,
+            bitmap: canvasBitmap,
+            originalWidth: rect.width,
+            originalHeight: rect.height
+        };
 
-    Composite.add(world, body);
-    bodies.push(body);
+        Composite.add(world, body);
+        bodies.push(body);
+    });
 }
 
 // ---------------------
@@ -299,13 +302,25 @@ function cleanupTinyBodies() {
         ctx.save();
         ctx.translate(body.position.x, body.position.y);
         ctx.rotate(body.angle);
-        ctx.fillStyle = body.meta.color;
-        ctx.fillRect(
-            -body.meta.width/2,
-            -body.meta.height/2,
-            body.meta.width,
-            body.meta.height
-        );
+        
+        if(body.meta.bitmap){
+            ctx.drawImage(
+                body.meta.bitmap,
+                -body.meta.width/2,
+                -body.meta.height/2,
+                body.meta.width,
+                body.meta.height
+            );
+        } else {
+            ctx.fillStyle = body.meta.color;
+            ctx.fillRect(
+                -body.meta.width/2,
+                -body.meta.height/2,
+                body.meta.width,
+                body.meta.height
+            );
+        }
+
         ctx.restore();
     });
 
@@ -313,5 +328,8 @@ function cleanupTinyBodies() {
 })();
 
 });
+
+
+// ref command for src to dist : npx esbuild src/content.js --bundle --minify --outfile=dist/content.js
 
 
