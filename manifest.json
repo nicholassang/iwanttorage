@@ -6,5 +6,11 @@
   "action": {
     "default_popup": "hello.html",
     "default_icon": "hello_extensions.png"
-  }
+  } ,
+  "content_scripts": [
+    {
+      "matches": ["https://*.google.com/*"],
+      "js": ["libs/matter.min.js", "content.js"]
+    }
+  ]
 }
