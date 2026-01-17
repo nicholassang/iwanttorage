@@ -1,80 +1,136 @@
 window.addEventListener("load", () => {
-    console.log("Google Physics Click-to-Fall Extension Loaded!");
+console.log("Google Physics Canvas – Draggable Boxes Loaded!");
 
-    // 1️⃣ Matter aliases
-    const Engine = Matter.Engine,
-        Render = Matter.Render,
-        Runner = Matter.Runner,
-        Bodies = Matter.Bodies,
-        Composite = Matter.Composite,
-        Events = Matter.Events;
+// Matter.js aliases
+const Engine = Matter.Engine,
+      Runner = Matter.Runner,
+      Bodies = Matter.Bodies,
+      Composite = Matter.Composite,
+      Mouse = Matter.Mouse,
+      MouseConstraint = Matter.MouseConstraint;
 
-    // 2️⃣ Create engine and world
-    const engine = Engine.create();
-    const world = engine.world;
+// 1️⃣ Engine and world
+const engine = Engine.create();
+engine.world.gravity.y = 1.5;
+const world = engine.world;
+Runner.run(Runner.create(), engine);
 
-    // 3️⃣ Create invisible renderer (optional)
-    const render = Render.create({
-        element: document.body,
-        engine: engine,
-        options: {
-            width: window.innerWidth,
-            height: window.innerHeight,
-            wireframes: false,
-            background: 'transparent'
-        }
-    });
-    Render.run(render);
+// 2️⃣ Canvas overlay
+const canvas = document.createElement('canvas');
+canvas.style.position = 'fixed';
+canvas.style.top = '0';
+canvas.style.left = '0';
+canvas.style.pointerEvents = 'auto';
+canvas.style.zIndex = 9999;
+document.body.appendChild(canvas);
+const ctx = canvas.getContext('2d');
 
-    // 4️⃣ Run the engine
-    Runner.run(Runner.create(), engine);
+function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
 
-    // 5️⃣ Track bodies
-    let bodies = [];
+    canvas.width  = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
 
-    // 6️⃣ Function to attach physics to a DOM element
-    function attachBody(el) {
-        const rect = el.getBoundingClientRect();
-        const scrollX = window.scrollX;
-        const scrollY = window.scrollY;
+    canvas.style.width  = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
 
-        const width = Math.max(rect.width, 20);
-        const height = Math.max(rect.height, 20);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
-        const body = Bodies.rectangle(
-            rect.left + scrollX + width / 2,
-            rect.top + scrollY + height / 2,
-            width,
-            height,
+// 3️⃣ Bodies array
+let bodies = [];
+const NUM_FRAGMENTS = 2;
+
+// 4️⃣ Floor & walls
+const floor = Bodies.rectangle(window.innerWidth/2, window.innerHeight + 50, window.innerWidth*2, 100, { isStatic: true });
+const leftWall = Bodies.rectangle(-50, window.innerHeight/2, 100, window.innerHeight*2, { isStatic: true });
+const rightWall = Bodies.rectangle(window.innerWidth+50, window.innerHeight/2, 100, window.innerHeight*2, { isStatic: true });
+Composite.add(world, [floor, leftWall, rightWall]);
+
+// 5️⃣ Spawn a box
+function spawnBox(x = 300, y = 50, w = 150, h = 40) {
+    const colors = ['#4285f4','#0f9d58','#f4b400','#db4437'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const body = Bodies.rectangle(x, y, w, h, { restitution: 0.6 });
+    body.meta = { width: w, height: h, color };
+    Composite.add(world, body);
+    bodies.push(body);
+    return body;
+}
+
+// 6️⃣ Break a box into 2 fragments
+function breakBox(body) {
+    if (!body.meta) return;
+    const w = body.meta.width / 2;
+    const h = body.meta.height;
+    Composite.remove(world, body);
+    bodies = bodies.filter(b => b !== body);
+
+    for (let i = 0; i < 2; i++) {
+        const frag = Bodies.rectangle(
+            body.position.x + (i===0?-w/2:w/2),
+            body.position.y,
+            w, h,
             { restitution: 0.6 }
         );
-
-        body.domElement = el;
-        bodies.push(body);
-        Composite.add(world, body);
-
-        el.style.position = 'absolute';
-        el.style.pointerEvents = 'none';
+        frag.meta = { width: w, height: h, color: body.meta.color };
+        Matter.Body.setVelocity(frag, { x: (Math.random()-0.5)*5, y: -2 });
+        Matter.Body.setAngularVelocity(frag, (Math.random()-0.5)*0.2);
+        Composite.add(world, frag);
+        bodies.push(frag);
     }
+}
 
-    // 7️⃣ Update DOM positions after physics update
-    Events.on(engine, 'afterUpdate', () => {
-        bodies.forEach(body => {
-            const el = body.domElement;
-            el.style.left = `${body.position.x - body.bounds.max.x + body.bounds.min.x}px`;
-            el.style.top  = `${body.position.y - body.bounds.max.y + body.bounds.min.y}px`;
-            el.style.transform = `rotate(${body.angle}rad)`;
-        });
-    });
+// 7️⃣ Spawn initial boxes
+for (let i = 0; i < 10; i++) {
+    spawnBox(100 + i*150, 50 - i*20);
+}
 
-    // 8️⃣ Handle clicks
-    document.addEventListener('click', e => {
-        let el = e.target;
+// 8️⃣ Mouse drag support (draggable boxes)
+const mouse = Mouse.create(canvas);
+mouse.pixelRatio = window.devicePixelRatio || 1;
+const mouseConstraint = MouseConstraint.create(engine, {
+    mouse: mouse,
+    constraint: { stiffness: 0.2, render: { visible: false } }
+});
+Composite.add(world, mouseConstraint);
 
-        // Skip elements already physics-enabled
-        if (bodies.find(b => b.domElement === el)) return;
+// 9️⃣ Click to break a box
+document.addEventListener('click', e => {
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
 
-        attachBody(el);
+    bodies.forEach(body => {
+        if (!body.meta) return;
+
+        const dx = mouseX - body.position.x;
+        const dy = mouseY - body.position.y;
+
+        if (Math.abs(dx) < body.meta.width/2 && Math.abs(dy) < body.meta.height/2) {
+            breakBox(body);
+        }
     });
 });
+
+// 🔟 Render loop
+(function renderLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    bodies.forEach(body => {
+        if (!body.meta) return;
+        ctx.save();
+        ctx.translate(body.position.x, body.position.y);
+        ctx.rotate(body.angle);
+        ctx.fillStyle = body.meta.color;
+        ctx.fillRect(-body.meta.width/2, -body.meta.height/2, body.meta.width, body.meta.height);
+        ctx.restore();
+    });
+
+    requestAnimationFrame(renderLoop);
+})();
+
+});
+
 
