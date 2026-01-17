@@ -1,9 +1,10 @@
 import html2canvas from "html2canvas";
 
 let isActive = false;
+let isToggling= false;
 
 chrome.storage.local.get("scriptActive", (data) => {
-  if (data.scriptActive === true) {
+  if (data.scriptActive === true && isToggling === false) {
     startScript(); 
   } else {
     isActive = false; 
@@ -14,6 +15,16 @@ function startScript() {
   if (isActive) return;
   isActive = true;
   chrome.storage.local.set({ scriptActive: true });
+
+            let mode = "mouse";
+
+            document.addEventListener("keydown", (e) => {
+            if (e.key.toLowerCase() === "f") {
+                // Toggle mode
+                mode = mode === "mouse" ? "flamethrower" : "mouse";
+                console.log("Mode switched to:", mode);
+                }
+            });
 
             // Matter aliases
             const Engine = Matter.Engine,
@@ -406,18 +417,21 @@ function startScript() {
             })();
 }
 
-function stopScript() {
+async function stopScript() {
   if (!isActive) return;
   isActive = false;
   chrome.storage.local.set({ scriptActive: false });
+  await window.location.reload();
+  isToggling = false;
 }
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.action === "toggle") {
     if (isActive) {
-      stopScript();
+        isToggling = true;
+        stopScript();
     } else {
-      startScript();
+        startScript();
     }
   }
 });
