@@ -76,7 +76,7 @@ let mode = "mouse";
 let flames = [];
 let shooting = false;
 let lastFlameTime = 0;
-const flameInterval = 40; // ms between flames
+const flameInterval = 40;
 let emitterAngle = 0;
 
 document.addEventListener("keydown", e => {
@@ -86,6 +86,13 @@ document.addEventListener("keydown", e => {
     if (e.key.toLowerCase() === "f") {
         mode = mode === "mouse" ? "flamethrower" : "mouse";
         console.log("Mode switched to", mode);
+
+        // Change cursor
+        if (mode === "flamethrower") {
+            canvas.style.cursor = "url(flame-thrower.png), auto";
+        } else {
+            canvas.style.cursor = "default";
+        }
     }
 });
 
@@ -96,13 +103,13 @@ document.addEventListener("mousedown", () => {
 document.addEventListener("mouseup", () => shooting = false);
 
 function spawnFlame(x, y, angle) {
-    const speed = 15 + Math.random() * 5;
+    const speed = 5 + Math.random() * 5;
     flames.push({
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         birth: Date.now(),
-        damage: 10
+        damage: 5
     });
 }
 
@@ -122,11 +129,28 @@ Events.on(engine, "beforeUpdate", () => {
             if (!b.meta) return;
             if (Math.abs(f.x - b.position.x) < b.meta.width/2 &&
                 Math.abs(f.y - b.position.y) < b.meta.height/2) {
-                if (!b.meta.hp) b.meta.hp = 100;
+                if (!b.meta.hp) {
+                    if (b.meta.bitmap) {
+                        b.meta.hp = 300;
+                        b.meta.maxHP = 300;
+                    } else {
+                        b.meta.hp = 100;
+                        b.meta.maxHP = 100; 
+                    }
+                }
                 b.meta.hp -= f.damage;
 
-                const burntShade = Math.max(0, 255 - (100 - b.meta.hp));
-                b.meta.color = `rgb(${burntShade},${burntShade/2},0)`;
+                const maxHP = b.meta.maxHP || 100; // store maxHP per object
+                const hpRatio = Math.max(0, b.meta.hp / maxHP); // 1 = full HP, 0 = dead
+                const burntShade = Math.floor(255 * hpRatio); // scales 255 → 0 as HP decreases
+
+                if (b.meta.bitmap) {
+                    // slower darkening for DOM objects
+                    b.meta.color = `rgb(${Math.floor(burntShade)},${Math.floor(burntShade/2)},0)`;
+                } else {
+                    // normal boxes can darken faster
+                    b.meta.color = `rgb(${Math.floor(burntShade)},${Math.floor(burntShade/2)},0)`;
+                }
 
                 if (b.meta.hp <= 0) breakBox(b);
             }
@@ -235,39 +259,31 @@ Events.on(engine, "beforeUpdate", () => {
             // Click on DOM elements to transfrom them into canvas objects
             // ---------------------
 
-            const google_search_elem = document.querySelectorAll('#rso > div');
-            const imgs = document.querySelectorAll('img');
-            const textarea = document.querySelectorAll('textarea');
-            const span = document.querySelectorAll('span');
-            const h1 = document.querySelectorAll('h1');
-            const h2 = document.querySelectorAll('h2');
-            const h3 = document.querySelectorAll('h3');
-            const h4 = document.querySelectorAll('h4');
-            const h5 = document.querySelectorAll('h5');
-            const a = document.querySelectorAll('a');
-            const btns = document.querySelectorAll('btn');
-
-            const breakable_elements = [
-                ...google_search_elem,
-                ...imgs,
-                ...textarea,
-                ...span,
-                ...h1,
-                ...h2,
-                ...h3,
-                ...h4,
-                ...h5,
-                ...a,
-                ...btns,
+            const BREAKABLE_SELECTORS = [
+            '#rso > div',
+            'img',
+            'textarea',
+            'span',
+            'h1', 'h2', 'h3', 'h4', 'h5',
+            'a', 'button'
             ];
 
-            breakable_elements.forEach(el => {
-                el.addEventListener('click', e => {
-                    e.stopPropagation();
-                    e.preventDefault();      // prevent default link navigation 
-                    spawnPhysicsFromDOM(el); // transform element to physics
+            function registerBreakableElements() {
+                const elements = document.querySelectorAll(BREAKABLE_SELECTORS.join(','));
+                elements.forEach(el => {
+                    if (el._isRegistered) return;  // skip already registered
+                    el._isRegistered = true;
+
+                    el.addEventListener('click', e => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        spawnPhysicsFromDOM(el);
+                    });
                 });
-            });
+            }
+
+            // check every 1-2 seconds
+            setInterval(registerBreakableElements, 1500);
 
             // ---------------------
             // Break Box
