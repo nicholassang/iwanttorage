@@ -1,0 +1,15 @@
+h1 {
+    color: pink;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    width: 2000px;
+    height: 2000px;
+    overflow: hidden;
+}
+
+canvas {
+    display: block;
+}
