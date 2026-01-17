@@ -154,42 +154,81 @@ elements.forEach(el => {
 // ---------------------
 // Break Box
 // ---------------------
-function breakBox(body){
-    if(!body.meta) return;
+function breakBox(body) {
+    if (!body.meta) return;
 
-    if(body.meta.width <= body.meta.originalWidth / 10) return;
+    const width = body.meta.width;
+    const height = body.meta.height;
 
-    const w = body.meta.width / 2;
-    const h = body.meta.height / 2;
+    // Stop breaking if too small
+    if (width <= body.meta.originalWidth / 10) return;
 
+    const w = width / 2;
+    const h = height;
+
+    // Remove the original body
     Composite.remove(world, body);
     bodies = bodies.filter(b => b !== body);
 
-    for(let i=0;i<2;i++){
+    for (let i = 0; i < 2; i++) {
+        let fragBitmap = null;
+
+        if (body.meta.bitmap) {
+            const srcTotalW = body.meta.bitmap.width;   // bitmap pixels
+            const srcTotalH = body.meta.bitmap.height;
+
+            const leftW  = Math.floor(srcTotalW / 2);
+            const rightW = srcTotalW - leftW;
+
+            const srcW = (i === 0) ? leftW : rightW;
+            const srcX = (i === 0) ? 0 : leftW;
+
+            // Create fragment bitmap in BITMAP PIXELS
+            fragBitmap = document.createElement("canvas");
+            fragBitmap.width  = srcW;
+            fragBitmap.height = srcTotalH;
+
+            const bctx = fragBitmap.getContext("2d");
+
+            // Copy pixels 1:1
+            bctx.drawImage(
+                body.meta.bitmap,
+                srcX, 0,            // source x, y
+                srcW, srcTotalH,    // source size
+                0, 0,               // destination
+                srcW, srcTotalH
+            );
+        }
+
+        // Create a Matter.js body for the fragment
         const frag = Bodies.rectangle(
-            body.position.x + (i===0 ? -w/2 : w/2),
+            body.position.x + (i === 0 ? -w / 2 : w / 2),
             body.position.y,
-            w, h,
-            { restitution:0.5 }
+            w,
+            h,
+            { restitution: 0.5 }
         );
+
+        // Store metadata
         frag.meta = {
             width: w,
             height: h,
-            color: body.meta.color,
+            bitmap: fragBitmap, // can be null
+            color: body.meta.color || "#4285f4", // fallback color
             originalWidth: body.meta.originalWidth,
             originalHeight: body.meta.originalHeight
         };
 
-        Matter.Body.setVelocity(frag,{
-            x:(Math.random()-0.5)*6,
-            y:-2
+        // Add some separation velocity
+        Matter.Body.setVelocity(frag, {
+            x: (Math.random() - 0.5) * 4,
+            y: -2
         });
 
         Composite.add(world, frag);
         bodies.push(frag);
     }
 }
-
 // ---------------------
 // Mouse dragging
 // ---------------------
