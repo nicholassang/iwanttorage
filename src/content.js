@@ -11,20 +11,21 @@ chrome.storage.local.get("scriptActive", (data) => {
   }
 });
 
+// flamethrower
+let mousePos = { x: 0, y: 0 };
+let emitter = { x: 0, y: 0 };
+
+document.addEventListener("mousemove", (e) => {
+    mousePos.x = e.clientX;
+    mousePos.y = e.clientY;
+    emitter.x = e.clientX;
+    emitter.y = e.clientY;
+});
+
 function startScript() {
   if (isActive) return;
   isActive = true;
   chrome.storage.local.set({ scriptActive: true });
-
-            let mode = "mouse";
-
-            document.addEventListener("keydown", (e) => {
-            if (e.key.toLowerCase() === "f") {
-                // Toggle mode
-                mode = mode === "mouse" ? "flamethrower" : "mouse";
-                console.log("Mode switched to:", mode);
-                }
-            });
 
             // Matter aliases
             const Engine = Matter.Engine,
@@ -52,6 +53,9 @@ function startScript() {
             canvas.style.zIndex = 9999;
             canvas.style.pointerEvents = 'auto';
             document.body.appendChild(canvas);
+            canvas.tabIndex = 0;      // Make it focusable
+            canvas.style.outline = "none";
+            canvas.focus();          // Give it keyboard focus
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
             function resizeCanvas() {
@@ -64,6 +68,74 @@ function startScript() {
             }
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
+
+            // ---------------------
+            // Cursor & Flamethrower Mode
+            // ---------------------
+let mode = "mouse";
+let flames = [];
+let shooting = false;
+let lastFlameTime = 0;
+const flameInterval = 40; // ms between flames
+let emitterAngle = 0;
+
+document.addEventListener("keydown", e => {
+    if (e.key === "a") emitterAngle -= 0.1;
+    if (e.key === "d") emitterAngle += 0.1;
+
+    if (e.key.toLowerCase() === "f") {
+        mode = mode === "mouse" ? "flamethrower" : "mouse";
+        console.log("Mode switched to", mode);
+    }
+});
+
+document.addEventListener("mousedown", () => {
+    if (mode === "flamethrower") shooting = true;
+});
+
+document.addEventListener("mouseup", () => shooting = false);
+
+function spawnFlame(x, y, angle) {
+    const speed = 15 + Math.random() * 5;
+    flames.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        birth: Date.now(),
+        damage: 10
+    });
+}
+
+// Single flame loop in beforeUpdate
+Events.on(engine, "beforeUpdate", () => {
+    if (mode === "flamethrower" && shooting && Date.now() - lastFlameTime > flameInterval) {
+        spawnFlame(emitter.x, emitter.y, emitterAngle);
+        lastFlameTime = Date.now();
+    }
+
+    // Move flames & collision
+    flames.forEach(f => {
+        f.x += f.vx;
+        f.y += f.vy;
+
+        bodies.forEach(b => {
+            if (!b.meta) return;
+            if (Math.abs(f.x - b.position.x) < b.meta.width/2 &&
+                Math.abs(f.y - b.position.y) < b.meta.height/2) {
+                if (!b.meta.hp) b.meta.hp = 100;
+                b.meta.hp -= f.damage;
+
+                const burntShade = Math.max(0, 255 - (100 - b.meta.hp));
+                b.meta.color = `rgb(${burntShade},${burntShade/2},0)`;
+
+                if (b.meta.hp <= 0) breakBox(b);
+            }
+        });
+    });
+
+    // Remove old flames
+    flames = flames.filter(f => Date.now() - f.birth < 800);
+});
 
             // ---------------------
             // Enable Mouse Scroll
@@ -400,6 +472,17 @@ function startScript() {
                             body.meta.width,
                             body.meta.height
                         );
+                        // Darken overlay
+                        if (body.meta.hp && body.meta.hp < 100) {
+                            const alpha = (100 - body.meta.hp) / 100; // 0 = full hp, 1 = burnt
+                            ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+                            ctx.fillRect(
+                                -body.meta.width / 2,
+                                -body.meta.height / 2,
+                                body.meta.width,
+                                body.meta.height
+                            );
+                        }
                     } else {
                         ctx.fillStyle = body.meta.color;
                         ctx.fillRect(
@@ -410,6 +493,16 @@ function startScript() {
                         );
                     }
 
+                    ctx.restore();
+                });
+
+                flames.forEach(f => {
+                    ctx.save();
+                    ctx.translate(f.x, f.y);
+                    ctx.fillStyle = "#ff5722";
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 6, 0, Math.PI*2);
+                    ctx.fill();
                     ctx.restore();
                 });
 
