@@ -10,21 +10,6 @@ body {
   align-items: center;
 }
 
-#info_toolkit {
-  width: 100vw;
-  display: grid;
-  grid-auto-flow: column; /* place items horizontally */
-  gap: 2px;               /* spacing between items */
-  font-size: 8px;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: auto;            /* let it size based on content */
-  align-items: end;       /* align items to the bottom of the container */
-  gap: 5px;
-}
-
-/* Top toolbar */
 #toolbar {
   width: 100%;
   background: linear-gradient(90deg, #b71c1c, #f44336);
@@ -36,7 +21,6 @@ body {
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* Center container */
 .container {
   flex: 1;
   display: flex;
@@ -47,7 +31,6 @@ body {
   width: 100%;
 }
 
-/* Circular center image */
 .center-img {
   width: 100px;
   height: 100px;
@@ -57,7 +40,6 @@ body {
   box-shadow: 0 4px 8px rgba(183,28,28,0.3);
 }
 
-/* Slider switch */
 .switch {
   position: relative;
   display: inline-block;

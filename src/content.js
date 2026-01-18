@@ -53,9 +53,9 @@ function startScript() {
             canvas.style.zIndex = 9999;
             canvas.style.pointerEvents = 'auto';
             document.body.appendChild(canvas);
-            canvas.tabIndex = 0;      // Make it focusable
+            canvas.tabIndex = 0;     
             canvas.style.outline = "none";
-            canvas.focus();          // Give it keyboard focus
+            canvas.focus();         
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
             function resizeCanvas() {
@@ -79,21 +79,59 @@ let lastFlameTime = 0;
 const flameInterval = 40;
 let emitterAngle = 0;
 
-document.addEventListener("keydown", e => {
-    if (e.key === "a") emitterAngle -= 0.1;
-    if (e.key === "d") emitterAngle += 0.1;
+function drawCursor() {
+    ctx.save();
+    ctx.translate(mousePos.x, mousePos.y);
 
+    if (mode === "mouse") {
+        ctx.strokeStyle = "rgba(80,150,255,0.9)";
+        ctx.shadowColor = "rgba(80,150,255,0.8)";
+    } else {
+        ctx.strokeStyle = "rgba(255,120,40,0.95)";
+        ctx.shadowColor = "rgba(255,80,0,1)";
+    }
+
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 12;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (mode === "flamethrower") {
+        ctx.save();
+        ctx.rotate(emitterAngle);
+
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = "rgba(255,120,40,1)";
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(18, 0);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+let turningLeft = false;
+let turningRight = false;
+
+document.addEventListener("keydown", e => {
+    if (e.key === "a") turningLeft = true;
+    if (e.key === "d") turningRight = true;
     if (e.key.toLowerCase() === "f") {
         mode = mode === "mouse" ? "flamethrower" : "mouse";
         console.log("Mode switched to", mode);
-
-        // Change cursor
-        if (mode === "flamethrower") {
-            canvas.style.cursor = "url(flame-thrower.png), auto";
-        } else {
-            canvas.style.cursor = "default";
-        }
     }
+});
+
+document.addEventListener("keyup", e => {
+    if (e.key === "a") turningLeft = false;
+    if (e.key === "d") turningRight = false;
 });
 
 document.addEventListener("mousedown", () => {
@@ -176,12 +214,29 @@ Events.on(engine, "beforeUpdate", () => {
             // ---------------------
             // World boundaries
             // ---------------------
-            const floor = Bodies.rectangle(window.innerWidth/2, window.innerHeight + 40, window.innerWidth*2, 80, { isStatic:true });
-            const leftWall = Bodies.rectangle(-40, window.innerHeight/2, 80, window.innerHeight*2, { isStatic:true });
-            const rightWall = Bodies.rectangle(window.innerWidth+40, window.innerHeight/2, 80, window.innerHeight*2, { isStatic:true });
-            const ceiling = Bodies.rectangle(window.innerWidth / 2, -40, window.innerWidth * 2, 80,{ isStatic: true });
-            Composite.add(world, [floor, leftWall, rightWall, ceiling]);
+            let boundaries = [];
 
+            function createBoundaries() {
+                boundaries.forEach(b => Composite.remove(world, b));
+                boundaries = [];
+
+                const floor = Bodies.rectangle(window.innerWidth/2, window.innerHeight + 40, window.innerWidth*2, 80, { isStatic:true });
+                const ceiling = Bodies.rectangle(window.innerWidth/2, -40, window.innerWidth*2, 80, { isStatic:true });
+                const leftWall = Bodies.rectangle(-40, window.innerHeight/2, 80, window.innerHeight*2, { isStatic:true });
+                const rightWall = Bodies.rectangle(window.innerWidth + 40, window.innerHeight/2, 80, window.innerHeight*2, { isStatic:true });
+
+                boundaries.push(floor, ceiling, leftWall, rightWall);
+                Composite.add(world, boundaries);
+            }
+
+            // Initial call
+            createBoundaries();
+
+            // Update on window resize
+            window.addEventListener('resize', () => {
+                resizeCanvas();  
+                createBoundaries();
+            });
             // ---------------------
             // Bodies storage
             // ---------------------
@@ -258,7 +313,6 @@ Events.on(engine, "beforeUpdate", () => {
             // ---------------------
             // Click on DOM elements to transfrom them into canvas objects
             // ---------------------
-
             const BREAKABLE_SELECTORS = [
             '#rso > div',
             'img',
@@ -271,7 +325,7 @@ Events.on(engine, "beforeUpdate", () => {
             function registerBreakableElements() {
                 const elements = document.querySelectorAll(BREAKABLE_SELECTORS.join(','));
                 elements.forEach(el => {
-                    if (el._isRegistered) return;  // skip already registered
+                    if (el._isRegistered) return; 
                     el._isRegistered = true;
 
                     el.addEventListener('click', e => {
@@ -282,7 +336,6 @@ Events.on(engine, "beforeUpdate", () => {
                 });
             }
 
-            // check every 1-2 seconds
             setInterval(registerBreakableElements, 1500);
 
             // ---------------------
@@ -308,7 +361,7 @@ Events.on(engine, "beforeUpdate", () => {
                     let fragBitmap = null;
 
                     if (body.meta.bitmap) {
-                        const srcTotalW = body.meta.bitmap.width;   // bitmap pixels
+                        const srcTotalW = body.meta.bitmap.width;   
                         const srcTotalH = body.meta.bitmap.height;
 
                         const leftW  = Math.floor(srcTotalW / 2);
@@ -324,12 +377,11 @@ Events.on(engine, "beforeUpdate", () => {
 
                         const bctx = fragBitmap.getContext("2d");
 
-                        // Copy pixels 1:1
                         bctx.drawImage(
                             body.meta.bitmap,
-                            srcX, 0,            // source x, y
-                            srcW, srcTotalH,    // source size
-                            0, 0,               // destination
+                            srcX, 0,            
+                            srcW, srcTotalH,    
+                            0, 0,               
                             srcW, srcTotalH
                         );
                     }
@@ -347,8 +399,8 @@ Events.on(engine, "beforeUpdate", () => {
                     frag.meta = {
                         width: w,
                         height: h,
-                        bitmap: fragBitmap, // can be null
-                        color: body.meta.color || "#4285f4", // fallback color
+                        bitmap: fragBitmap, 
+                        color: body.meta.color || "#4285f4", 
                         originalWidth: body.meta.originalWidth,
                         originalHeight: body.meta.originalHeight
                     };
@@ -395,9 +447,9 @@ Events.on(engine, "beforeUpdate", () => {
             // Update canvas pointer-events dynamically
             document.addEventListener('mousemove', e => {
                 if (isDragging || isMouseOverBody(e.clientX, e.clientY)) {
-                    canvas.style.pointerEvents = 'auto';  // interact with canvas objects
+                    canvas.style.pointerEvents = 'auto'; 
                 } else {
-                    canvas.style.pointerEvents = 'none';  // allow clicks to pass through
+                    canvas.style.pointerEvents = 'none';  
                 }
             });
 
@@ -440,11 +492,11 @@ Events.on(engine, "beforeUpdate", () => {
 
             // Enable drag detection with the mouse constraint
             Events.on(mouseConstraint, 'startdrag', () => {
-                isDragging = true; // start dragging → keep pointer-events auto
+                isDragging = true; 
             });
 
             Events.on(mouseConstraint, 'enddrag', () => {
-                isDragging = false; // drag ended → pointer-events can toggle normally
+                isDragging = false; 
             });
             // ---------------------
             // Cleanup Fragments
@@ -490,7 +542,7 @@ Events.on(engine, "beforeUpdate", () => {
                         );
                         // Darken overlay
                         if (body.meta.hp && body.meta.hp < 100) {
-                            const alpha = (100 - body.meta.hp) / 100; // 0 = full hp, 1 = burnt
+                            const alpha = (100 - body.meta.hp) / 100;
                             ctx.fillStyle = `rgba(0,0,0,${alpha})`;
                             ctx.fillRect(
                                 -body.meta.width / 2,
@@ -508,7 +560,6 @@ Events.on(engine, "beforeUpdate", () => {
                             body.meta.height
                         );
                     }
-
                     ctx.restore();
                 });
 
@@ -521,7 +572,9 @@ Events.on(engine, "beforeUpdate", () => {
                     ctx.fill();
                     ctx.restore();
                 });
-
+                if (turningLeft)  emitterAngle -= 0.05;
+                if (turningRight) emitterAngle += 0.05;
+                drawCursor();
                 requestAnimationFrame(render);
             })();
 }
@@ -534,13 +587,14 @@ async function stopScript() {
   isToggling = false;
 }
 
-chrome.runtime.onMessage.addListener((msg) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "toggle") {
     if (isActive) {
-        isToggling = true;
-        stopScript();
+      stopScript();
     } else {
-        startScript();
+      startScript();
     }
+    sendResponse({ success: true }); 
   }
+  return true;
 });

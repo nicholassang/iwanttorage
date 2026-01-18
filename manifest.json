@@ -1,6 +1,6 @@
 {
-  "name": "iwanttorage",
-  "description": "Life is hard. To relieve stress, I must destroy.",
+  "name": "I Want To Rage",
+  "description": "Life is hard. To relieve stress, I must destroy.\nPress F to toggle between flamethrower & cursor. Left click, A & D to control.",
   "version": "1.0",
   "manifest_version": 3,
   "action": {
@@ -17,5 +17,11 @@
     "activeTab",
     "scripting",
     "storage"
-  ]
+  ],
+    "web_accessible_resources": [
+    {
+        "resources": ["flame-thrower.png"],
+        "matches": ["<all_urls>"]
+    }
+]
 }
