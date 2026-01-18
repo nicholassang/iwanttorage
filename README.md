@@ -2,7 +2,14 @@
 "I Want To RAGE" is a Google Widget Destroyer made for NUS Hack&Roll 2026. It is made for those under heavy stress and wants to take their rage out on your PC (within safe means). 
 
 ## Installation
-Google Extension ! Link : 
+Google Extension ! 
+Zip File : [iwanttorage.zip](https://github.com/user-attachments/files/24693174/iwanttorage.zip)
+1) Download Zip and extract
+2) Go to chrome://extensions/ . Or "Manage my Extensions"
+3) Click on Developer Mode (Top Right)
+4) Click on Load unpacked, and select the recently unzipped file
+5) Click on the puzzle piece looking icon at the top right of your browser and turn "I Want To RAGE" on
+6) Go Search "Cats" and click on an image !
 
 
 ## Usage
