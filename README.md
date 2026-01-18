@@ -35,7 +35,7 @@ https://github.com/user-attachments/assets/4e383731-ce90-46e2-849e-fce3212949a2
 https://github.com/user-attachments/assets/b55e1f61-5d5d-4423-ae4a-8f8b741ee470
 
 ## To Note
-Performance of widget conversion to breakable object dpends on your PC's capabilities, there may be some bugs but nothing groundbreaking. A quick reload and toggling of the web extension usually does the trick 👍
+Performance of widget conversion to breakable object depends on your PC's capabilities, there may be some bugs but nothing groundbreaking. A quick reload and toggling of the web extension usually does the trick 👍
 
 There are some widgets which the web extension cannot convert, because its a restricted site reserved for Google or the widgets are designed to be guarded against web scraping, security hacks... the web extension does it's best within its capabilities.
 
@@ -44,7 +44,7 @@ This tool must not be used for illegal or harmful purposes, including but not li
 
 ## Contributing
 
-This project was made with the help of Material.js !
+This project was made with the help of Material.js ! ❤️
 
 ## License
 
