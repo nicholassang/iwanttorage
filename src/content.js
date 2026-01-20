@@ -7,6 +7,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
+// When user reloads, run script
+window.addEventListener("beforeunload", () => {
+    chrome.storage.local.set({ scriptActive: false, isReloading: false });
+});
+
+
 // Prevent double injection of canvas
 if (!window.__IWANTTORAGE_SCRIPT_LOADED__) {
   window.__IWANTTORAGE_SCRIPT_LOADED__ = true;
