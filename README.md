@@ -3,7 +3,8 @@
 
 ## Installation
 Google Extension ! 
-Zip File : [iwanttorage.zip](https://github.com/user-attachments/files/24693174/iwanttorage.zip)
+Zip File : [iwanttorage.zip](https://github.com/user-attachments/files/24734582/iwanttorage.zip)
+
 1) Download Zip and extract
 2) Go to chrome://extensions/ . Or "Manage my Extensions"
 3) Click on Developer Mode (Top Right)
