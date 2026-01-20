@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const url = new URL(tab.url);
     const domainParts = url.hostname.split(".");
     tldDisplay.textContent = domainParts.slice(-2).join(".");
+    if (tldDisplay.textContent == "newtab"){tldDisplay.textContent = "This page is protected by Google, please search something instead"}
   } catch {
     tldDisplay.textContent = "unknown";
   }
@@ -46,10 +47,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     await injectScriptOnce();
 
     // Send toggle message
-    chrome.tabs.sendMessage(tab.id, { action: "toggle" }, () => {
-      toggleSwitch.disabled = false;
-    });
+    try {
+      await waitForContentScript(tab.id);
+      await chrome.tabs.sendMessage(tab.id, { action: "toggle" });
+    } catch (err) {
+      console.warn("Toggle failed:", err.message);
+    }
+
+    toggleSwitch.disabled = false;
   }
 
   toggleSwitch.addEventListener("change", toggleScript);
 });
+
+async function waitForContentScript(tabId, timeout = 1500) {
+  const start = Date.now();
+
+  while (Date.now() - start < timeout) {
+    try {
+      const response = await chrome.tabs.sendMessage(tabId, { action: "ping" });
+      if (response?.ready) return true;
+    } catch (e) {
+      console.log(e)
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  throw new Error("Content script not ready");
+}

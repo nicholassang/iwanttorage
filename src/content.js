@@ -1,17 +1,83 @@
 import html2canvas from "html2canvas";
 
-let isActive = false;
-let isToggling= false;
-
-chrome.storage.local.get("scriptActive", (data) => {
-  if (data.scriptActive === true && isToggling === false) {
-    startScript(); 
-  } else {
-    isActive = false; 
+// Ping back to pop.js for inital handshake
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === "ping") {
+    sendResponse({ ready: true });
   }
 });
 
-// flamethrower
+// Prevent double injection of canvas
+if (!window.__IWANTTORAGE_SCRIPT_LOADED__) {
+  window.__IWANTTORAGE_SCRIPT_LOADED__ = true;
+
+// Toggling logic
+let isActive = false;
+let isToggling = false;
+let isReloading = false; 
+
+chrome.storage.local.get("isReloading", (data) => {
+  if (data.isReloading) {
+    chrome.storage.local.set({ isReloading: false });
+    isReloading = false;
+  }
+});
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action !== "toggle") return;
+
+  if (isToggling || isReloading) {
+    sendResponse({ success: false, busy: true, isActive });
+    return true;
+  }
+
+  isToggling = true;
+
+  if (isActive) {
+    stopScriptSafe(sendResponse);
+  } else {
+    startScriptSafe(sendResponse);
+  }
+
+  return true; 
+});
+
+function startScriptSafe(sendResponse) {
+  if (isActive) {
+    isToggling = false;
+    if (sendResponse) sendResponse({ success: true, isActive });
+    return;
+  }
+
+  isActive = true;
+  chrome.storage.local.set({ scriptActive: true });
+
+  startScript(); 
+
+  setTimeout(() => {
+    isToggling = false;
+    if (sendResponse) sendResponse({ success: true, isActive });
+  }, 300);
+}
+
+async function stopScriptSafe(sendResponse) {
+  if (!isActive) {
+    isToggling = false;
+    if (sendResponse) sendResponse({ success: true, isActive });
+    return;
+  }
+
+  isActive = false;
+  isReloading = true; 
+  await chrome.storage.local.set({ scriptActive: false, isReloading: true });
+
+  if (sendResponse) sendResponse({ success: true, isActive });
+
+  await new Promise(r => setTimeout(r, 150));
+  window.location.reload();
+}
+
+// Flamethrower
 let mousePos = { x: 0, y: 0 };
 let emitter = { x: 0, y: 0 };
 
@@ -23,10 +89,6 @@ document.addEventListener("mousemove", (e) => {
 });
 
 function startScript() {
-  if (isActive) return;
-  isActive = true;
-  chrome.storage.local.set({ scriptActive: true });
-
             // Matter aliases
             const Engine = Matter.Engine,
                 Runner = Matter.Runner,
@@ -130,8 +192,8 @@ document.addEventListener("keydown", e => {
 });
 
 document.addEventListener("keyup", e => {
-    if (e.key === "a") turningLeft = false;
-    if (e.key === "d") turningRight = false;
+    if (e.key === "d") turningLeft = false;
+    if (e.key === "a") turningRight = false;
 });
 
 document.addEventListener("mousedown", () => {
@@ -284,7 +346,7 @@ Events.on(engine, "beforeUpdate", () => {
 
                 // Render DOM element to a canvas
                 html2canvas(el).then(canvasBitmap => {
-                    // Hide the original DOM element
+                    // Remove the original DOM element
                     el.parentNode.removeChild(el);
                     el.style.pointerEvents = 'none';
                     
@@ -370,7 +432,7 @@ Events.on(engine, "beforeUpdate", () => {
                         const srcW = (i === 0) ? leftW : rightW;
                         const srcX = (i === 0) ? 0 : leftW;
 
-                        // Create fragment bitmap in BITMAP PIXELS
+                        // fragment bitmap pixels
                         fragBitmap = document.createElement("canvas");
                         fragBitmap.width  = srcW;
                         fragBitmap.height = srcTotalH;
@@ -386,7 +448,7 @@ Events.on(engine, "beforeUpdate", () => {
                         );
                     }
 
-                    // Create a Matter.js body for the fragment
+                    // Matter.js fragment
                     const frag = Bodies.rectangle(
                         body.position.x + (i === 0 ? -w / 2 : w / 2),
                         body.position.y,
@@ -405,7 +467,7 @@ Events.on(engine, "beforeUpdate", () => {
                         originalHeight: body.meta.originalHeight
                     };
 
-                    // Add some separation velocity
+                    // Separation velocity
                     Matter.Body.setVelocity(frag, {
                         x: (Math.random() - 0.5) * 4,
                         y: -2
@@ -468,7 +530,6 @@ Events.on(engine, "beforeUpdate", () => {
                 // If dragged, do nothing
                 if (dist > CLICK_DISTANCE_THRESHOLD) return;
 
-                // True click → check for physics bodies under cursor
                 const mx = e.clientX;
                 const my = e.clientY;
 
@@ -578,23 +639,4 @@ Events.on(engine, "beforeUpdate", () => {
                 requestAnimationFrame(render);
             })();
 }
-
-async function stopScript() {
-  if (!isActive) return;
-  isActive = false;
-  chrome.storage.local.set({ scriptActive: false });
-  await window.location.reload();
-  isToggling = false;
 }
-
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.action === "toggle") {
-    if (isActive) {
-      stopScript();
-    } else {
-      startScript();
-    }
-    sendResponse({ success: true }); 
-  }
-  return true;
-});
